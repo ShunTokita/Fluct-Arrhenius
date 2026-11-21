@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ゆらぎが障壁を越える確率</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<script>
+window.MathJax={
+  tex:{inlineMath:[['\\(','\\)']],displayMath:[['\\[','\\]']],macros:{kB:'k_{\\mathrm{B}}',dd:'\\mathrm{d}'}},
+  svg:{fontCache:'local',scale:1.05},
+  options:{enableMenu:false},
+  startup:{ready(){ MathJax.startup.defaultReady(); MathJax.startup.promise.then(()=>{ window.__mjReady=true; window.dispatchEvent(new Event('mj-ready')); }); }}
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js" defer></script>
+<style>
+:root{
+  /* layout: 縦スクロールの章立て。各章 = 短い説明 → 実験(canvas) → 測定値と理論値の並置 */
+  --bg:#0b0e18; --panel:#121729; --panel2:#181e35; --line:#272e49;
+  --text:#ebe8e1; --muted:#959cb4; --hot:#ff8a3d; --cold:#5cc4ff; --gold:#ffc76e; --vio:#b49cff;
+  --display:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font-family:var(--body);font-size:16px;line-height:1.85;-webkit-font-smoothing:antialiased}
+a{color:var(--cold)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+h1,h2,h3{font-family:var(--display);font-weight:800;text-wrap:balance;line-height:1.35;margin:0}
+h1{font-size:clamp(2rem,4.6vw,3.3rem);letter-spacing:.02em}
+h2{font-size:clamp(1.5rem,3vw,2.1rem)}
+h3{font-size:1.15rem;font-weight:600}
+p{margin:0;max-width:68ch}
+.muted{color:var(--muted)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+mjx-container[jax="SVG"]{color:inherit}
+mjx-container[jax="SVG"][display="true"]{margin:.35em 0 !important;overflow-x:auto;overflow-y:hidden;max-width:100%}
+
+/* hero */
+header.hero{padding:44px 0 30px;border-bottom:1px solid var(--line)}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:32px;align-items:start}
+.eyebrow{font-family:var(--mono);font-size:.78rem;letter-spacing:.14em;color:var(--gold);margin-bottom:14px}
+.lead{display:grid;gap:10px;margin-top:16px;color:#d6d3de;font-size:1.02rem}
+.bigeq{margin-top:20px;padding:6px 18px 10px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(90deg,rgba(92,196,255,.08),rgba(255,138,61,.1));font-size:1.35rem}
+.bigeq mjx-container[display="true"]{margin:.2em 0 !important}
+dl.sym{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:10px 0 0;font-size:.9rem;color:#cfccd8}
+dl.sym dt{text-align:right}
+dl.sym dd{margin:0}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+canvas{display:block;width:100%;border-radius:8px}
+
+/* controls */
+.ctrl{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;margin-top:12px;font-size:.92rem}
+.ctrl label{color:var(--muted);white-space:nowrap}
+.ctrl output{font-family:var(--mono);font-variant-numeric:tabular-nums;min-width:5.5ch;text-align:right;color:var(--text)}
+input[type=range]{width:100%;accent-color:var(--hot);height:22px}
+input[type=range]:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+button{font-family:var(--body);font-size:.88rem;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 14px;cursor:pointer}
+button:hover{border-color:var(--hot)}
+button[aria-pressed=true]{border-color:var(--gold);color:var(--gold)}
+button:disabled{opacity:.4;cursor:default}
+.readouts{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.ro{flex:1 1 140px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.ro .k{font-size:.76rem;color:var(--muted);display:block;line-height:1.5}
+.ro .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:1.15rem}
+.ro.meas{border-left:3px solid var(--hot)} .ro.theo{border-left:3px solid var(--cold)}
+
+/* sections */
+section{padding:56px 0;border-bottom:1px solid var(--line)}
+.sec-head{display:flex;gap:18px;align-items:baseline;margin-bottom:18px}
+.sec-no{font-family:var(--mono);color:var(--hot);font-size:.95rem;letter-spacing:.1em}
+.intro{display:grid;gap:12px;margin-bottom:22px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.8rem;color:var(--muted);margin-top:8px;align-items:center}
+.legend span::before{content:"";display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle;background:var(--c)}
+.legend span.dot::before{width:8px;height:8px;border-radius:50%}
+.note{font-size:.88rem;color:var(--muted);border-left:2px solid var(--line);padding-left:12px;margin-top:12px;max-width:none}
+.callout{background:linear-gradient(90deg,rgba(255,138,61,.12),transparent);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-top:18px}
+
+/* derivation player */
+.player{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.eqstage{position:relative;height:150px;font-size:clamp(19px,2.6vw,27px);background:radial-gradient(ellipse at center,rgba(255,199,110,.07),transparent 70%);border-bottom:1px solid var(--line)}
+.eqline{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;white-space:nowrap;line-height:1}
+.tok{display:inline-block;margin:0 .14em;color:var(--text);will-change:transform,opacity}
+.tok.hl{color:var(--gold)}
+.tok.fade{transition:color 1.4s ease}
+.pbody{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:20px;padding:18px}
+.pstep{display:none}
+.pstep.on{display:grid;gap:10px;animation:rise .45s ease}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.pstep .badge{font-family:var(--mono);font-size:.78rem;color:var(--gold);letter-spacing:.08em}
+.pstep h3{font-size:1.25rem}
+.pstep p{font-size:.98rem;color:#d6d3de}
+.gwrap{position:relative}
+.glbl{position:absolute;transform:translate(-50%,-50%);font-size:15px;pointer-events:none;color:var(--text);white-space:nowrap;display:none}
+.glbl.on{display:block}
+.gcap{display:none;font-size:.86rem;color:var(--muted);margin-top:8px;min-height:2.6em}
+.gcap.on{display:block}
+.pctrl{display:flex;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
+.dots{display:flex;gap:6px;flex:1;justify-content:center;flex-wrap:wrap}
+.dots button{width:12px;height:12px;padding:0;border-radius:50%;background:var(--line);border:0}
+.dots button[aria-current=true]{background:var(--gold);transform:scale(1.25)}
+.dots button.done{background:#7a6a4a}
+
+/* table */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:6px 0 26px}
+table{border-collapse:collapse;width:100%;min-width:860px;font-size:.9rem}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+thead th{font-family:var(--display);font-weight:600;font-size:1rem;background:var(--panel2)}
+tbody th{color:var(--muted);font-weight:500;white-space:nowrap;background:var(--panel)}
+tr:last-child td,tr:last-child th{border-bottom:0}
+col.c-mat{background:rgba(255,138,61,.05)}
+
+/* unified */
+.unified{position:sticky;top:0;z-index:5;background:rgba(11,14,24,.94);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:12px;padding:10px 16px 12px;margin-bottom:18px}
+.unified .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:18px;align-items:end}
+.ratio{font-family:var(--mono);text-align:right;line-height:1.5;font-size:.8rem;color:var(--muted)}
+.ratio b{font-size:1.5rem;color:var(--gold);font-weight:600}
+.quad{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column}
+.card h3{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.tag{font-family:var(--mono);font-size:.7rem;color:var(--bg);background:var(--c,var(--hot));border-radius:4px;padding:1px 6px;letter-spacing:.06em}
+.map{font-size:.82rem;color:var(--muted);margin:4px 0 10px;line-height:1.65}
+.card .readouts{margin-top:auto;padding-top:10px}
+
+/* routes */
+.routes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:22px}
+.route{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:8px;align-content:start}
+.route .eq{font-size:.95rem;text-align:center;background:var(--panel2);border-radius:8px;padding:4px 6px}
+.route p{font-size:.9rem;color:#cfccd8}
+.route .src{font-size:.78rem;color:var(--muted)}
+
+ul.limits{margin:0;padding:0;list-style:none;display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
+ul.limits li{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:.92rem}
+ul.limits b{font-family:var(--display);font-weight:600;display:block;margin-bottom:4px;font-size:1rem}
+ol.refs{font-size:.85rem;color:var(--muted);padding-left:1.4em;margin:0;display:grid;gap:4px}
+footer{padding:28px 0 60px;font-size:.8rem;color:var(--muted)}
+#motionBtn{position:fixed;right:16px;bottom:16px;z-index:10;background:rgba(24,30,53,.95)}
+
+@media (max-width:860px){
+  .hero-grid,.two,.quad,.routes,ul.limits,.pbody{grid-template-columns:minmax(0,1fr)}
+  .unified .row{grid-template-columns:minmax(0,1fr)}
+  .ratio{text-align:left}
+  .eqstage{height:130px}
+}
+@media (max-width:560px){ .dots{flex-basis:100%;order:-1} .pctrl{justify-content:space-between} }
+@media (max-width:420px){ .wrap{padding:0 16px} .ctrl{grid-template-columns:1fr auto} .ctrl label{grid-column:1/-1} }
+@media (prefers-reduced-motion: reduce){ .pstep.on{animation:none} }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">拡散・反応・選択・知覚に共通する1つの式</div>
+      <h1>ゆらぎが障壁を越える確率</h1>
+      <div class="lead">
+        <p>化学反応は、温度が上がるほど速く進みます。金属の中で原子が動き回る速さ（拡散）も同じで、温度が少し上がるだけで何倍にもなります。</p>
+        <p>原子が隣の場所へ移るには、小さな「山」を越えなければなりません。その勢いは、熱によるでたらめな揺れ（ゆらぎ）から偶然もらうしかありません。だから山を越える回数は、<b>山の高さ</b>と<b>ゆらぎの大きさ</b>の比で決まります。</p>
+        <p>同じ形の式は、道路の経路選び、動物の選択、だまし絵の見え方の切り替わりにも出てきます。このページでは、粒子を実際に動かしながら、その理由をたどります。</p>
+      </div>
+      <div class="bigeq">\[\Gamma=\nu\,\exp\!\left(-\frac{Q}{\kB T}\right)\]</div>
+      <dl class="sym">
+        <dt>\(\Gamma\)（ガンマ）</dt><dd>1秒あたりに山を越える回数</dd>
+        <dt>\(\nu\)（ニュー）</dt><dd>山に挑戦する回数（原子の振動の回数）</dd>
+        <dt>\(Q\)</dt><dd>山の高さ（活性化エネルギー）</dd>
+        <dt>\(\kB T\)</dt><dd>ゆらぎの大きさ（温度 \(T\) に比例。\(\kB\) はボルツマン定数）</dd>
+      </dl>
+    </div>
+    <div class="stage">
+      <canvas id="heroCv" style="height:270px" aria-label="でこぼこの坂の谷を熱ゆらぎで越える粒子のシミュレーション"></canvas>
+      <p class="muted" style="font-size:.85rem;margin-top:8px">でこぼこの坂の上で揺れている粒子です。温度のつまみを右へ動かすと、谷から谷へ移る粒子が急に増えます。</p>
+      <div class="ctrl"><label for="heroT">温度（ゆらぎ） \(\kB T/Q\)</label><input id="heroT" type="range" min="0.10" max="0.60" step="0.01" value="0.22"><output id="heroTo">0.22</output></div>
+      <div class="readouts">
+        <div class="ro"><span class="k">山の高さ ÷ ゆらぎ　\(Q/\kB T\)</span><span class="n" id="heroR">4.55</span></div>
+        <div class="ro meas"><span class="k">測定：山を越えた回数（1粒子・単位時間あたり）</span><span class="n" id="heroM">計測中</span></div>
+        <div class="ro theo"><span class="k">理論値（Kramersの式）\(2\pi e^{-Q/\kB T}\)</span><span class="n" id="heroTh">—</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+<!-- 01 -->
+<section id="boltzmann">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-no">01</span><h2>ボルツマン分布はどこから来るか</h2></div>
+    <div class="intro">
+      <p>2000個の粒子が、ランダムに選んだ相手と「2人のエネルギーを合わせて、ランダムな割合で分け直す」ことだけを繰り返します。総エネルギーは保存され、ほかに規則はありません。それでも分布は必ず指数関数 \(P(E)\propto e^{-E/\kB T}\) に落ち着きます。総量が決まっているとき、場合の数が圧倒的に多いのがこの分け方だからです。</p>
+      <p>右のヒストグラムの、障壁 \(Q\) より右側（明るい部分）が「障壁を越えられるだけのエネルギーを持っている粒子」です。その割合は \(e^{-Q/\kB T}\) になります。縦軸を対数にすると指数分布は直線になります。</p>
+    </div>
+    <div class="two">
+      <div class="stage">
+        <canvas id="gridCv" style="height:300px" aria-label="2000個の粒子のエネルギー。障壁を越えるエネルギーを持つ粒子は白く縁取り"></canvas>
+        <div class="legend"><span class="dot" style="--c:#2a3a7a">低エネルギー</span><span class="dot" style="--c:#ff8a3d">高エネルギー</span><span class="dot" style="--c:#ffffff">\(E\ge Q\)（障壁を越えられる）</span></div>
+      </div>
+      <div class="stage">
+        <canvas id="histCv" style="height:300px" aria-label="エネルギー分布のヒストグラムと理論曲線"></canvas>
+        <div class="legend"><span style="--c:#5cc4ff">理論 \(\propto e^{-E/\kB T}\)</span><span style="--c:#ffc76e">障壁 \(Q\)</span></div>
+      </div>
+    </div>
+    <div class="stage" style="margin-top:18px">
+      <div class="ctrl"><label for="bT">平均エネルギー \(\kB T\)</label><input id="bT" type="range" min="5" max="30" step="0.5" value="12"><output id="bTo">12.0</output></div>
+      <div class="ctrl"><label for="bQ">障壁 \(Q\)</label><input id="bQ" type="range" min="10" max="120" step="1" value="45"><output id="bQo">45</output></div>
+      <div class="btnrow">
+        <button id="bReset" type="button">全員を同じエネルギーに戻す</button>
+        <button id="bLog" type="button" aria-pressed="false">縦軸を対数にする</button>
+        <span class="muted" style="font-size:.85rem">リセット後、数秒で指数分布が立ち上がります</span>
+      </div>
+      <div class="readouts">
+        <div class="ro"><span class="k">\(Q/\kB T\)</span><span class="n" id="bR">3.75</span></div>
+        <div class="ro meas"><span class="k">測定：\(E\ge Q\) の粒子の割合</span><span class="n" id="bM">—</span></div>
+        <div class="ro theo"><span class="k">理論：\(e^{-Q/\kB T}\)</span><span class="n" id="bTh">—</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 -->
+<section id="arrhenius">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-no">02</span><h2>ボルツマン分布からアレニウス式へ</h2></div>
+    <div class="intro"><p>式を1段ずつ変形していきます。「次へ」を押すと、式の中の記号が移動・変形して次の式になります。右の図は、その段階で式が何を表しているかを示します。</p></div>
+
+    <div class="player" id="player">
+      <div class="eqstage" id="eqStage" aria-live="polite"></div>
+      <div class="pbody">
+        <div id="pTexts">
+          <div class="pstep" data-i="0"><span class="badge">STEP 1 / 11</span><h3>出発点：ボルツマン分布</h3><p>粒子がエネルギー \(E\) を持つ確率です。\(E\) が大きくなるほど、指数関数的に少なくなります。減り方の目盛りになるのが \(\kB T\)（ゆらぎの大きさ）です。</p></div>
+          <div class="pstep" data-i="1"><span class="badge">STEP 2 / 11</span><h3>山より上にいる確率</h3><p>山の高さ \(Q\) を越えるには、\(E\ge Q\) が必要です。その確率は、グラフの \(Q\) より右側の面積、つまり \(P(E)\) を \(Q\) から \(\infty\) まで積分したものです。</p></div>
+          <div class="pstep" data-i="2"><span class="badge">STEP 3 / 11</span><h3>中身を代入する</h3><p>積分の中の \(P(E)\) に、STEP 1 の式をそのまま入れます。</p></div>
+          <div class="pstep" data-i="3"><span class="badge">STEP 4 / 11</span><h3>積分を実行する</h3><p>\(-e^{-E/\kB T}\) を \(E\) で微分すると、もとの \(P(E)\) に戻ります。つまり \(-e^{-E/\kB T}\) が積分の答え（原始関数）です。あとは上端と下端の値を入れるだけです。</p></div>
+          <div class="pstep" data-i="4"><span class="badge">STEP 5 / 11</span><h3>山を越える確率</h3><p>\(E=\infty\) では 0、\(E=Q\) では \(e^{-Q/\kB T}\)。結果は、STEP 1 の \(E\) を \(Q\) に置き換えただけの、すっきりした形になります。</p></div>
+          <div class="pstep" data-i="5"><span class="badge">STEP 6 / 11</span><h3>挑戦の回数をかける</h3><p>原子は谷の中で1秒に約 \(10^{13}\) 回振動し、そのたびに山に挑戦します。挑戦の回数 \(\nu\) × 1回の成功確率 = 1秒あたりに山を越える回数 \(\Gamma\) です。</p></div>
+          <div class="pstep" data-i="6"><span class="badge">STEP 7 / 11</span><h3>でたらめな歩きから拡散係数へ</h3><p>原子は1回跳ぶと距離 \(a\) だけ動き、向きは毎回でたらめです。3次元でこの「でたらめな歩き」をすると、広がりの速さ（拡散係数）\(D\) は \(a^2\Gamma/6\) になります。</p></div>
+          <div class="pstep" data-i="7"><span class="badge">STEP 8 / 11</span><h3>\(\Gamma\) を代入する</h3><p>STEP 6 で求めた \(\Gamma\) を入れます。温度 \(T\) が入っているのは指数の部分だけです。</p></div>
+          <div class="pstep" data-i="8"><span class="badge">STEP 9 / 11</span><h3>定数をまとめる</h3><p>温度によらない \(a^2\nu/6\) をひとまとめにして \(D_0\)（頻度因子）と書きます。これが拡散係数のアレニウス式です。</p></div>
+          <div class="pstep" data-i="9"><span class="badge">STEP 10 / 11</span><h3>1モルあたりに直す</h3><p>\(\kB\) は原子1個あたりの定数です。活性化エネルギーを1モルあたり（kJ/mol）で表すときは、\(\kB\) を気体定数 \(R=N_\mathrm{A}\kB\) に置き換えます。</p></div>
+          <div class="pstep" data-i="10"><span class="badge">STEP 11 / 11</span><h3>対数をとると直線になる</h3><p>両辺の自然対数をとると、\(\ln D\) は \(1/T\) の一次式です。実験で測った \(D\) をこの軸でプロットすれば直線に並び、傾き \(-Q/R\) から活性化エネルギー \(Q\) が求まります。</p></div>
+        </div>
+        <div>
+          <div class="gwrap" id="gwrap">
+            <canvas id="derivCv" style="height:250px" aria-label="各ステップの図"></canvas>
+            <span class="glbl" data-l="E">\(E\)</span>
+            <span class="glbl" data-l="PE">\(P(E)\)</span>
+            <span class="glbl" data-l="kT">\(\kB T\)</span>
+            <span class="glbl" data-l="Q">\(Q\)</span>
+            <span class="glbl" data-l="a">\(a\)</span>
+            <span class="glbl" data-l="rn">\(\sqrt{n}\,a\)</span>
+            <span class="glbl" data-l="T">\(T\ [\mathrm{K}]\)</span>
+            <span class="glbl" data-l="D">\(D\)</span>
+            <span class="glbl" data-l="invT">\(1/T\ [10^{-3}\,\mathrm{K^{-1}}]\)</span>
+            <span class="glbl" data-l="lnD">\(\ln D\)</span>
+            <span class="glbl" data-l="slope">傾き \(-Q/R\)</span>
+          </div>
+          <div id="gCaps">
+            <p class="gcap" data-i="0">横軸がエネルギー、縦軸がその確率。\(E\) が \(\kB T\) 増えるごとに確率は約 \(1/e\approx 0.37\) 倍になります。</p>
+            <p class="gcap" data-i="1">影の部分の面積 ＝ 山 \(Q\) を越えられるだけのエネルギーを持つ粒子の割合。</p>
+            <p class="gcap" data-i="2">代入しても図は同じです。式が具体的な形になりました。</p>
+            <p class="gcap" data-i="3">影の部分を計算しているところです。</p>
+            <p class="gcap" data-i="4">図の \(Q=2\kB T\) なら影の面積は \(e^{-2}\approx 0.14\)。約7回に1回です。\(Q=10\kB T\) なら \(e^{-10}\approx 4.5\times10^{-5}\) まで減ります。</p>
+            <p class="gcap" data-i="5">振動のたびに山に挑み、ほとんどは失敗して谷に戻されます（図では成功率を大きくしています）。</p>
+            <p class="gcap" data-i="6">\(n\) 回跳ぶと、向きがでたらめでも平均して \(\sqrt{n}\,a\) くらい広がります。</p>
+            <p class="gcap" data-i="7">\(n\) 回跳ぶと、向きがでたらめでも平均して \(\sqrt{n}\,a\) くらい広がります。</p>
+            <p class="gcap" data-i="8">\(Q=250\ \mathrm{kJ/mol}\) の例。温度が少し上がるだけで \(D\) は急に大きくなります。</p>
+            <p class="gcap" data-i="9">\(Q=250\ \mathrm{kJ/mol}\) の例。1000 K から 1100 K で \(D\) は約15倍です。</p>
+            <p class="gcap" data-i="10">曲線だったグラフが直線になりました。傾きが \(-Q/R\) です。</p>
+          </div>
+        </div>
+      </div>
+      <div class="pctrl">
+        <button id="pPrev" type="button">◀ 前へ</button>
+        <div class="dots" id="pDots" role="group" aria-label="ステップ"></div>
+        <button id="pAuto" type="button" aria-pressed="false">自動で再生</button>
+        <button id="pNext" type="button">次へ ▶</button>
+      </div>
+    </div>
+    <p class="note">厳密には、状態密度・相関因子・空孔濃度・活性化エントロピー（遷移状態理論の \(e^{\Delta S^{\ddagger}/\kB}\)）が前指数因子 \(D_0\) に入ります。指数部の形は変わりません。</p>
+
+    <h3 style="margin:34px 0 6px">実験：ダイナミクスからアレニウス直線が出てくるか</h3>
+    <p class="muted" style="margin-bottom:14px;font-size:.95rem">下のシミュレーションには \(e^{-Q/\kB T}\) を一切書き込んでいません。300個の粒子に「ポテンシャルの勾配による力」と「温度に応じたランダムな蹴り」を与えるだけです。6つの温度で跳躍頻度を測り、\(\ln\Gamma\) を \(1/T\) に対してプロットします。</p>
+    <div class="two">
+      <div class="stage">
+        <canvas id="arrLand" style="height:260px" aria-label="測定中の温度での粒子の運動"></canvas>
+        <p class="num" id="arrStatus" style="font-size:.85rem;color:var(--muted);margin-top:8px">待機中</p>
+      </div>
+      <div class="stage">
+        <canvas id="arrPlot" style="height:260px" aria-label="アレニウスプロット"></canvas>
+        <div class="legend"><span class="dot" style="--c:#ff8a3d">測定値（±1σ）</span><span style="--c:#5cc4ff">Kramers理論 \(\ln 2\pi-Q/\kB T\)</span><span style="--c:#ffc76e">測定点の最小二乗直線</span></div>
+      </div>
+    </div>
+    <div class="btnrow"><button id="arrRun" type="button">測定をやり直す</button></div>
+    <div class="readouts">
+      <div class="ro meas"><span class="k">測定直線の傾き（\(=-Q_\mathrm{fit}/Q\)）</span><span class="n" id="arrSlope">—</span></div>
+      <div class="ro theo"><span class="k">理論の傾き</span><span class="n">−1.000</span></div>
+      <div class="ro"><span class="k">測定 / Kramers（直近の測定点）</span><span class="n" id="arrRatio">—</span></div>
+    </div>
+    <p class="note">Kramersの式は障壁が十分高い（\(Q/\kB T\gg 1\)）ときの近似です。障壁が低い高温側では測定値がやや下にずれ、傾きは −1 よりわずかに緩くなります。実測のアレニウスプロットで前指数因子の温度依存が問題になるのと同じ構図です。</p>
+    <div class="callout">
+      <p><b>指数の効き方の実感：</b>\(Q=250\ \mathrm{kJ/mol}\) の拡散で、1000 K から 1100 K に10%昇温すると</p>
+      \[\frac{D(1100\,\mathrm{K})}{D(1000\,\mathrm{K})}=\exp\!\left[\frac{Q}{R}\left(\frac{1}{1000}-\frac{1}{1100}\right)\right]=e^{2.73}\approx 15\]
+    </div>
+  </div>
+</section>
+
+<!-- 03 -->
+<section id="analogy">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-no">03</span><h2>同じ骨格、4つの分野</h2></div>
+    <div class="intro">
+      <p>どの分野でも、「障壁（コスト・価値の差）\(\Delta\)」と「ゆらぎの大きさ \(T\)」の比 \(\Delta/T\) が確率を決めます。下の2つのつまみの値は、4つの実験すべてに同時に反映されます。</p>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <colgroup><col><col class="c-mat"><col><col><col></colgroup>
+        <thead><tr><th scope="col"></th><th scope="col">材料（拡散）</th><th scope="col">交通工学（経路選択）</th><th scope="col">行動心理学（選択行動）</th><th scope="col">心理学（知覚の交替）</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">起こる事象</th><td>原子が隣のサイトへ跳ぶ</td><td>遅い経路を選ぶ</td><td>価値の低い選択肢を選ぶ</td><td>図形の見え方が反転する</td></tr>
+          <tr><th scope="row">障壁 \(\Delta\)</th><td>活性化エネルギー \(Q\)</td><td>所要時間（一般化費用）の差 \(\Delta c\)</td><td>期待価値の差 \(\Delta V\)</td><td>エネルギー地形の障壁 \(\Delta U\)</td></tr>
+          <tr><th scope="row">ゆらぎ \(T\)</th><td>熱エネルギー \(\kB T\)</td><td>効用の誤差のスケール \(1/\theta\)</td><td>ソフトマックスの温度 \(\tau\)</td><td>神経活動のノイズ強度 \(\varepsilon\)</td></tr>
+          <tr><th scope="row">式</th><td>\(\Gamma=\nu\, e^{-Q/\kB T}\)</td><td>\(P_B=\dfrac{1}{1+e^{\theta\,\Delta c}}\)</td><td>\(P_i=\dfrac{e^{V_i/\tau}}{\sum_j e^{V_j/\tau}}\)</td><td>\(\dfrac{1}{\langle t\rangle}\propto e^{-\Delta U/\varepsilon}\)</td></tr>
+          <tr><th scope="row">代表的な理論</th><td>遷移状態理論、Kramers</td><td>ランダム効用理論（ロジット）</td><td>Luceの選択公理、softmax</td><td>ノイズ駆動の双安定モデル</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="unified" aria-label="共通パラメータ">
+      <div class="row">
+        <div class="ctrl" style="margin-top:0"><label for="uD">障壁 \(\Delta\)</label><input id="uD" type="range" min="0" max="6" step="0.1" value="3"><output id="uDo">3.0</output></div>
+        <div class="ctrl" style="margin-top:0"><label for="uT">ゆらぎ \(T\)</label><input id="uT" type="range" min="0.4" max="3" step="0.05" value="1"><output id="uTo">1.00</output></div>
+        <div class="ratio">\(\Delta/T\) = <b id="uR">3.00</b><br>\(e^{-\Delta/T}\) = <span id="uE">0.0498</span>　\(1/(1+e^{\Delta/T})\) = <span id="uL">0.0474</span></div>
+      </div>
+    </div>
+
+    <div class="quad">
+      <div class="card">
+        <h3><span class="tag" style="--c:#ff8a3d">MAT</span>材料：原子の跳躍</h3>
+        <p class="map">\(\Delta\) = 活性化エネルギー \(Q\)、\(T\) = \(\kB T\)。原子は振動のたびに隣の空きサイトへの跳躍を試み、確率 \(e^{-\Delta/T}\) で成功します。振動の振幅は温度とともに大きくなります。</p>
+        <canvas id="pA" style="height:200px" aria-label="格子上を跳躍する原子"></canvas>
+        <div class="readouts">
+          <div class="ro meas"><span class="k">測定：成功 / 試行</span><span class="n" id="pAm">—</span></div>
+          <div class="ro theo"><span class="k">理論 \(e^{-\Delta/T}\)</span><span class="n" id="pAt">—</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3><span class="tag" style="--c:#5cc4ff">TRF</span>交通工学：経路の選択</h3>
+        <p class="map">\(\Delta\) = 経路Bが余計にかかる時間、\(T\) = ドライバーの所要時間の見積もり誤差の大きさ。各車はロジットモデルに従って経路を選びます。</p>
+        <canvas id="pB" style="height:200px" aria-label="2本の経路を選ぶ車"></canvas>
+        <div class="readouts">
+          <div class="ro meas"><span class="k">測定：経路Bを選んだ割合</span><span class="n" id="pBm">—</span></div>
+          <div class="ro theo"><span class="k">理論 \(1/(1+e^{\Delta/T})\)</span><span class="n" id="pBt">—</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3><span class="tag" style="--c:#ffc76e">BEH</span>行動心理学：選択行動</h3>
+        <p class="map">\(\Delta\) = 2つの選択肢の価値の差、\(T\) = 探索の度合い（softmaxの温度）。\(T\) が大きいほど、損な選択肢もときどき選ぶ「探索的」な行動になります。</p>
+        <canvas id="pC" style="height:200px" aria-label="選択の時系列ラスター"></canvas>
+        <div class="readouts">
+          <div class="ro meas"><span class="k">測定：低価値Bを選んだ割合</span><span class="n" id="pCm">—</span></div>
+          <div class="ro theo"><span class="k">理論 \(1/(1+e^{\Delta/T})\)</span><span class="n" id="pCt">—</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3><span class="tag" style="--c:#b49cff">PSY</span>心理学：知覚の交替</h3>
+        <p class="map">ネッカーの立方体は2通りに見え、見え方はときどき反転します。2つの解釈を二重井戸の谷とみなし、\(\Delta\) = 谷の間の障壁、\(T\) = 神経ノイズの強度とします。</p>
+        <canvas id="pD" style="height:200px" aria-label="ネッカーの立方体と二重井戸ポテンシャル"></canvas>
+        <div class="readouts">
+          <div class="ro meas"><span class="k">測定：平均持続時間</span><span class="n" id="pDm">—</span></div>
+          <div class="ro theo"><span class="k">理論（Kramers）\(\propto e^{\Delta/T}\)</span><span class="n" id="pDt">—</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:16px">2択の選択確率 \(1/(1+e^{\Delta/T})\) は、エネルギー差 \(\Delta\) の2準位系のボルツマン分布そのものです。\(\Delta/T\) が大きくなると \(e^{-\Delta/T}\) に近づき、アレニウス型の「裾」と一致します。上のバーの2つの値で確認できます。</p>
+  </div>
+</section>
+
+<!-- 04 -->
+<section id="why">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-no">04</span><h2>なぜ同じ形になるのか</h2></div>
+    <div class="intro"><p>同じ指数形に至る道は少なくとも3つあり、分野ごとに使われる道が異なります。</p></div>
+    <div class="routes">
+      <div class="route">
+        <span class="tag" style="--c:#ff8a3d;justify-self:start">道 1</span>
+        <h3>平均だけが決まっているとき</h3>
+        <div class="eq">\[\begin{gathered}\max S\quad\text{s.t.}\quad\langle E\rangle=\text{const.}\\ \Downarrow\\ p_i\propto e^{-\beta E_i}\end{gathered}\]</div>
+        <p>平均値の拘束だけを課してエントロピーを最大化すると、指数分布が唯一の解になります。\(\beta\) はラグランジュ乗数で、物理では \(1/\kB T\)。01章の実験がこれにあたります。</p>
+        <p class="src">Jaynes (1957)</p>
+      </div>
+      <div class="route">
+        <span class="tag" style="--c:#5cc4ff;justify-self:start">道 2</span>
+        <h3>誤差が極値分布に従うとき</h3>
+        <div class="eq">\[\begin{gathered}U_i=V_i+\varepsilon_i,\quad \varepsilon_i\sim\text{Gumbel}\\ \Downarrow\\ P_i=\dfrac{e^{V_i/T}}{\sum_j e^{V_j/T}}\end{gathered}\]</div>
+        <p>各選択肢の効用に独立なGumbel誤差が乗ると、「最大の効用を選ぶ」確率はちょうどロジット（ソフトマックス）になります。交通工学・計量経済学の離散選択モデルの基礎です。</p>
+        <p class="src">McFadden (1974)</p>
+      </div>
+      <div class="route">
+        <span class="tag" style="--c:#b49cff;justify-self:start">道 3</span>
+        <h3>ノイズが障壁を越えさせるとき</h3>
+        <div class="eq">\[\begin{gathered}\dd x=-U'(x)\,\dd t+\sqrt{2T}\,\dd W\\ \Downarrow\\ k\propto e^{-\Delta U/T}\end{gathered}\]</div>
+        <p>ガウス白色ノイズの下で谷から脱出する頻度は、障壁とノイズ強度の比で指数的に決まります。前因子は谷と峠の曲率、摩擦で決まります。02章の実験と知覚交替のモデルがこれにあたります。</p>
+        <p class="src">Kramers (1940)</p>
+      </div>
+    </div>
+
+    <h3 style="margin:8px 0 6px">誤差の分布で「裾」は変わる</h3>
+    <p class="muted" style="font-size:.95rem;margin-bottom:12px">道2を数値で確かめます。2択で価値差 \(\Delta\) の選択をモンテカルロで2万回ずつ行い、誤差をGumbel分布にした場合とガウス分布（同じ分散、プロビットモデル）にした場合を比べます。線形軸ではほぼ同じですが、対数軸にすると裾の落ち方の違いが見えます。</p>
+    <div class="stage">
+      <canvas id="tailCv" style="height:300px" aria-label="ロジットとプロビットの選択確率の比較"></canvas>
+      <div class="legend"><span style="--c:#5cc4ff">ロジット \(1/(1+e^{x})\)</span><span style="--c:#ffc76e">\(e^{-x}\)（アレニウス型の裾）</span><span class="dot" style="--c:#ff8a3d">Gumbel誤差（MC）</span><span class="dot" style="--c:#b49cff">ガウス誤差（MC）</span></div>
+      <div class="btnrow"><button id="tailLog" type="button" aria-pressed="false">縦軸を対数にする</button><button id="tailResample" type="button">サンプルし直す</button></div>
+    </div>
+    <p class="note">ガウス誤差では大きな \(\Delta/T\) で確率が指数より速く落ちます。正確に指数の裾を持つのは、Gumbel誤差（道2）か、ボルツマン分布そのもの（道1）の場合です。</p>
+  </div>
+</section>
+
+<!-- 05 -->
+<section id="limits">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-no">05</span><h2>相似性の限界</h2></div>
+    <ul class="limits">
+      <li><b>「温度」の意味が違う</b>物理の \(\kB T\) は独立に測れる量です。ロジットやsoftmaxの温度はデータへの当てはめで決まる尺度パラメータで、効用の単位とは比 \(\Delta/T\) でしか識別できません。</li>
+      <li><b>前指数因子に物理的意味があるか</b>材料では \(\nu\)、相関因子、活性化エントロピーなど意味づけと独立な見積もりができます。他分野の比例定数は多くの場合、当てはめの自由度です。</li>
+      <li><b>アレニウスからのずれ</b>材料でも、粒界拡散と体拡散の寄与の切り替わりによる折れ曲がり、ガラス形成系のVogel–Fulcher型の曲がり、低温での量子トンネルなど、単一障壁モデルが破れる場面があります。</li>
+      <li><b>モデル側の制約</b>ロジットは無関係な選択肢からの独立性（IIA）を仮定します。知覚交替の持続時間分布は純粋な指数分布ではなくガンマ分布に近いことが多く、ノイズに加えて神経の順応が寄与すると考えられています。</li>
+    </ul>
+  </div>
+</section>
+
+<section id="refs" style="border-bottom:0">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-no">REF</span><h2>参考文献</h2></div>
+    <ol class="refs">
+      <li>S. Arrhenius, Z. Phys. Chem. 4, 226 (1889).</li>
+      <li>H. Eyring, J. Chem. Phys. 3, 107 (1935).</li>
+      <li>H. A. Kramers, Physica 7, 284 (1940).</li>
+      <li>E. T. Jaynes, Phys. Rev. 106, 620 (1957).</li>
+      <li>R. D. Luce, <i>Individual Choice Behavior</i>, Wiley (1959).</li>
+      <li>R. B. Dial, Transp. Res. 5, 83 (1971).</li>
+      <li>D. McFadden, in <i>Frontiers in Econometrics</i>, ed. P. Zarembka, Academic Press, 105 (1974).</li>
+      <li>R. S. Sutton, A. G. Barto, <i>Reinforcement Learning: An Introduction</i>, 2nd ed., MIT Press (2018).</li>
+      <li>R. Moreno-Bote, J. Rinzel, N. Rubin, J. Neurophysiol. 98, 1125 (2007).</li>
+    </ol>
+  </div>
+</section>
+</main>
+<footer><div class="wrap">シミュレーションはすべてブラウザ内で実行しています。単位は無次元（障壁 Q = 1、格子間隔 a = 1、摩擦 γ = 1）。</div></footer>
+<button id="motionBtn" type="button" aria-pressed="false">アニメーションを停止</button>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let paused=reduce;
+const COL={bg:'#0b0e18',panel:'#121729',line:'#272e49',text:'#ebe8e1',muted:'#959cb4',hot:'#ff8a3d',cold:'#5cc4ff',gold:'#ffc76e',vio:'#b49cff'};
+const SERIF='italic 600 15px "Shippori Mincho B1","Times New Roman",serif';
+
+/* ---------- utilities ---------- */
+function setup(cv){
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  const r=cv.getBoundingClientRect();
+  cv.width=Math.max(1,Math.round(r.width*dpr)); cv.height=Math.max(1,Math.round(r.height*dpr));
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w:r.width,h:r.height};
+}
+let gs=null;
+function gauss(){ if(gs!==null){const t=gs;gs=null;return t;} let u=0; while(u===0)u=Math.random(); const v=Math.random(); const r=Math.sqrt(-2*Math.log(u)); gs=r*Math.sin(6.283185307*v); return r*Math.cos(6.283185307*v); }
+const STOPS=[[0,[32,48,110]],[0.3,[59,130,214]],[0.52,[150,214,240]],[0.68,[255,211,122]],[0.85,[255,138,61]],[1,[255,77,94]]];
+function heatRGB(t){ t=Math.max(0,Math.min(1,t)); for(let i=1;i<STOPS.length;i++){ if(t<=STOPS[i][0]){ const a=STOPS[i-1],b=STOPS[i],f=(t-a[0])/(b[0]-a[0]); return [0,1,2].map(k=>Math.round(a[1][k]+(b[1][k]-a[1][k])*f)); } } return STOPS[STOPS.length-1][1]; }
+function heat(t,al){ const c=heatRGB(t); return al===undefined?`rgb(${c[0]},${c[1]},${c[2]})`:`rgba(${c[0]},${c[1]},${c[2]},${al})`; }
+function fmtP(p){ if(!isFinite(p))return '—'; if(p===0)return '0'; if(p>=0.001)return (p*100).toPrecision(3)+' %'; return p.toExponential(2); }
+function fmt(x,d){ return isFinite(x)?x.toFixed(d):'—'; }
+function bind(id,cb,dec){ const el=$('#'+id), out=$('#'+id+'o'); const f=()=>{ const v=parseFloat(el.value); if(out)out.textContent=v.toFixed(dec); cb(v); }; el.addEventListener('input',f); return parseFloat(el.value); }
+
+/* ---------- animation manager ---------- */
+const anims=[];
+const io=new IntersectionObserver(es=>{ for(const e of es){ for(const a of anims){ if(a.el===e.target)a.vis=e.isIntersecting; } } },{rootMargin:'120px'});
+function addAnim(el,fn){ const a={el,fn,vis:false,force:false}; anims.push(a); io.observe(el); return a; }
+let last=performance.now();
+function loop(t){ const dt=Math.min(0.05,(t-last)/1000); last=t; for(const a of anims){ if(a.vis&&(!paused||a.force)){ a.fn(dt); } } requestAnimationFrame(loop); }
+const mb=$('#motionBtn');
+function syncMB(){ mb.textContent=paused?'アニメーションを再生':'アニメーションを停止'; mb.setAttribute('aria-pressed',paused?'true':'false'); }
+mb.addEventListener('click',()=>{paused=!paused;syncMB();}); syncMB();
+
+/* ---------- periodic landscape (hero, 02) ---------- */
+function U1(x){ return 0.5*(1-Math.cos(6.283185307*x)); }
+function langevinStep(xs,well,kT,dt,steps,onHop){
+  const amp=Math.sqrt(2*kT*dt), n=xs.length;
+  for(let s=0;s<steps;s++){
+    for(let i=0;i<n;i++){
+      let x=xs[i];
+      x+=-Math.PI*Math.sin(6.283185307*x)*dt+amp*gauss();
+      xs[i]=x;
+      const m=Math.round(x);
+      if(m!==well[i]&&Math.abs(x-m)<0.2){ if(onHop)onHop(i,well[i],m); well[i]=m; } // count only when the next well bottom is reached
+    }
+  }
+}
+function drawLandscape(C,xs,lane,L,kT,kTmax,flashes){
+  const {ctx,w,h}=C; ctx.clearRect(0,0,w,h);
+  const padX=8, top=34, bot=h-22;
+  const X=x=>padX+(x+0.5)/L*(w-2*padX);
+  const Y=u=>bot-u*(bot-top);
+  const tn=Math.min(1,kT/kTmax);
+  const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,heat(tn,0.10)); g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  ctx.beginPath(); ctx.moveTo(X(-0.5),h);
+  for(let i=0;i<=240;i++){ const x=-0.5+L*i/240; ctx.lineTo(X(x),Y(U1(x))); }
+  ctx.lineTo(X(L-0.5),h); ctx.closePath();
+  const lg=ctx.createLinearGradient(0,top,0,h); lg.addColorStop(0,'rgba(92,196,255,0.16)'); lg.addColorStop(1,'rgba(92,196,255,0.02)');
+  ctx.fillStyle=lg; ctx.fill();
+  ctx.beginPath(); for(let i=0;i<=240;i++){ const x=-0.5+L*i/240; const px=X(x),py=Y(U1(x)); if(i===0)ctx.moveTo(px,py); else ctx.lineTo(px,py); }
+  ctx.strokeStyle='rgba(150,214,240,0.7)'; ctx.lineWidth=1.5; ctx.stroke();
+  const yk=Y(Math.min(1.15,kT));
+  ctx.setLineDash([4,5]); ctx.strokeStyle=heat(tn,0.9); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(X(-0.5),yk); ctx.lineTo(X(L-0.5),yk); ctx.stroke(); ctx.setLineDash([]);
+  ctx.font=SERIF; ctx.fillStyle=heat(tn); ctx.textAlign='right'; ctx.fillText('kT',w-10,yk-5);
+  ctx.strokeStyle=COL.gold; ctx.fillStyle=COL.gold; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(X(-0.25),Y(1)); ctx.lineTo(X(-0.25),Y(0)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(X(-0.25)-4,Y(1)); ctx.lineTo(X(-0.25)+4,Y(1)); ctx.moveTo(X(-0.25)-4,Y(0)); ctx.lineTo(X(-0.25)+4,Y(0)); ctx.stroke();
+  ctx.textAlign='left'; ctx.fillText('Q',X(-0.25)+6,Y(0.55));
+  for(const f of flashes){ const fx=X(((f.x+0.5)%L+L)%L-0.5); const rg=ctx.createRadialGradient(fx,Y(1),0,fx,Y(1),26); rg.addColorStop(0,`rgba(255,199,110,${0.85*f.life})`); rg.addColorStop(1,'rgba(255,199,110,0)'); ctx.fillStyle=rg; ctx.fillRect(fx-28,Y(1)-28,56,56); }
+  ctx.fillStyle=heat(0.25+0.75*tn);
+  ctx.shadowColor=heat(0.25+0.75*tn,0.9); ctx.shadowBlur=8;
+  for(let i=0;i<xs.length;i++){ let x=((xs[i]+0.5)%L+L)%L-0.5; const px=X(x), py=Y(U1(x))-4-lane[i]*16; ctx.beginPath(); ctx.arc(px,py,2.6,0,6.2832); ctx.fill(); }
+  ctx.shadowBlur=0;
+}
+
+/* ---------- HERO ---------- */
+(function(){
+  const cv=$('#heroCv'); let C=setup(cv);
+  const N=90,L=6,xs=new Float64Array(N),well=new Int32Array(N),lane=new Float64Array(N);
+  for(let i=0;i<N;i++){ well[i]=Math.floor(Math.random()*L); xs[i]=well[i]+(Math.random()-0.5)*0.15; lane[i]=Math.random(); }
+  let kT=0.22, simT=0, t0=0, hops=[]; const flashes=[], S=2.0, dt=0.004;
+  function upd(){ $('#heroR').textContent=fmt(1/kT,2); $('#heroTh').textContent=fmt(2*Math.PI*Math.exp(-1/kT),4); }
+  bind('heroT',v=>{kT=v;hops=[];t0=simT;upd();},2); upd();
+  function frame(rdt){
+    const steps=Math.max(1,Math.round(S*rdt/dt));
+    langevinStep(xs,well,kT,dt,steps,(i,a,b)=>{ hops.push(simT); flashes.push({x:(a+b)/2,life:1}); });
+    simT+=steps*dt;
+    while(hops.length&&hops[0]<simT-60)hops.shift();
+    for(let k=flashes.length-1;k>=0;k--){ flashes[k].life-=rdt*1.8; if(flashes[k].life<=0)flashes.splice(k,1); }
+    const win=Math.min(60,simT-t0);
+    $('#heroM').textContent=(hops.length<4||win<3)?'計測中…':fmt(hops.length/(N*win),4);
+    drawLandscape(C,xs,lane,L,kT,0.6,flashes);
+  }
+  addAnim(cv,frame);
+  drawLandscape(C,xs,lane,L,kT,0.6,flashes);
+  window.addEventListener('resize',()=>{C=setup(cv);drawLandscape(C,xs,lane,L,kT,0.6,flashes);});
+})();
+
+/* ---------- 01 Boltzmann via random energy exchange ---------- */
+(function(){
+  const gcv=$('#gridCv'), hcv=$('#histCv'); let G=setup(gcv), H=setup(hcv);
+  const N=2000, COLS=50, ROWS=40, E=new Float64Array(N);
+  let kT=12, Q=45, logY=false, fracEMA=NaN;
+  const EMAX=150, NB=50, BW=EMAX/NB;
+  function reset(){ E.fill(kT); fracEMA=NaN; }
+  for(let i=0;i<N;i++)E[i]=-kT*Math.log(1-Math.random());
+  function exchange(n){ for(let k=0;k<n;k++){ const i=(Math.random()*N)|0, j=(Math.random()*N)|0; if(i===j)continue; const s=E[i]+E[j], r=Math.random(); E[i]=r*s; E[j]=s-E[i]; } }
+  function upd(){ $('#bR').textContent=fmt(Q/kT,2); $('#bTh').textContent=fmtP(Math.exp(-Q/kT)); }
+  bind('bT',v=>{ let m=0; for(let i=0;i<N;i++)m+=E[i]; m/=N; const f=v/m; for(let i=0;i<N;i++)E[i]*=f; kT=v; fracEMA=NaN; upd(); draw(); },1);
+  bind('bQ',v=>{Q=v;fracEMA=NaN;upd();draw();},0);
+  $('#bReset').addEventListener('click',()=>{reset();draw();});
+  $('#bLog').addEventListener('click',e=>{logY=!logY;e.currentTarget.setAttribute('aria-pressed',logY);draw();});
+  upd();
+  function draw(){
+    {const {ctx,w,h}=G; ctx.clearRect(0,0,w,h); const cw=w/COLS, ch=h/ROWS, r=Math.max(1.2,Math.min(cw,ch)*0.36);
+      for(let i=0;i<N;i++){ const c=i%COLS, rr=(i/COLS)|0; const cx=(c+0.5)*cw, cy=(rr+0.5)*ch; const e=E[i];
+        ctx.fillStyle=heat(Math.min(1,e/(3.2*kT))); ctx.beginPath(); ctx.arc(cx,cy,r,0,6.2832); ctx.fill();
+        if(e>=Q){ ctx.strokeStyle='#fff'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(cx,cy,r+1.6,0,6.2832); ctx.stroke(); } } }
+    const {ctx,w,h}=H; ctx.clearRect(0,0,w,h);
+    const L=42,R=12,T=14,B=30, pw=w-L-R, ph=h-T-B;
+    const cnt=new Float64Array(NB); let above=0; for(let i=0;i<N;i++){ const b=Math.floor(E[i]/BW); if(b<NB)cnt[b]++; if(E[i]>=Q)above++; }
+    const frac=above/N; fracEMA=isNaN(fracEMA)?frac:0.92*fracEMA+0.08*frac;
+    $('#bM').textContent=fmtP(fracEMA);
+    const peak=N*(1-Math.exp(-BW/kT));
+    const ymaxLin=Math.max(peak*1.15,...cnt)*1.02;
+    const lmin=-0.3, lmax=Math.log10(N);
+    const X=e=>L+e/EMAX*pw;
+    const Yv=c=>{ if(logY){ const l=c>0?Math.log10(c):lmin-1; return T+ph*(1-(Math.max(lmin,l)-lmin)/(lmax-lmin)); } return T+ph*(1-c/ymaxLin); };
+    ctx.fillStyle='rgba(255,199,110,0.07)'; ctx.fillRect(X(Math.min(Q,EMAX)),T,X(EMAX)-X(Math.min(Q,EMAX)),ph);
+    ctx.strokeStyle=COL.line; ctx.lineWidth=1; ctx.font='11px "JetBrains Mono",monospace'; ctx.fillStyle=COL.muted;
+    ctx.textAlign='center'; for(let e=0;e<=EMAX;e+=30){ ctx.beginPath(); ctx.moveTo(X(e),T); ctx.lineTo(X(e),T+ph); ctx.stroke(); ctx.fillText(String(e),X(e),h-12); }
+    ctx.textAlign='right';
+    if(logY){ for(let p=0;p<=Math.floor(lmax);p++){ const y=Yv(Math.pow(10,p)); ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(L+pw,y); ctx.stroke(); ctx.fillText('10'+['⁰','¹','²','³'][p],L-6,y+4); } }
+    else { const step=ymaxLin>600?200:ymaxLin>250?100:50; for(let c=0;c<=ymaxLin;c+=step){ const y=Yv(c); ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(L+pw,y); ctx.stroke(); ctx.fillText(String(c),L-6,y+4);} }
+    ctx.textAlign='left'; ctx.fillText('エネルギー',L+4,h-1); ctx.save(); ctx.translate(11,T+ph/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.fillText('粒子数',0,0); ctx.restore();
+    for(let b=0;b<NB;b++){ if(cnt[b]<=0)continue; const e0=b*BW, x0=X(e0)+0.5, x1=X(e0+BW)-0.5, y=Yv(cnt[b]); const isTail=e0+BW*0.5>=Q;
+      ctx.fillStyle=isTail?heat(0.82,0.95):heat(Math.min(1,(e0+BW/2)/(3.2*kT)),0.55); ctx.fillRect(x0,y,x1-x0,T+ph-y); }
+    ctx.strokeStyle=COL.cold; ctx.lineWidth=2; ctx.beginPath(); let started=false;
+    for(let i=0;i<=200;i++){ const e=EMAX*i/200; const c=N*(Math.exp(-e/kT)-Math.exp(-(e+BW)/kT)); if(logY&&c<Math.pow(10,lmin)){break;} const px=X(Math.min(EMAX,e+BW/2)), py=Yv(c); if(!started){ctx.moveTo(px,py);started=true;} else ctx.lineTo(px,py); }
+    ctx.stroke();
+    if(Q<=EMAX){ ctx.strokeStyle=COL.gold; ctx.setLineDash([5,4]); ctx.beginPath(); ctx.moveTo(X(Q),T); ctx.lineTo(X(Q),T+ph); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle=COL.gold; ctx.font=SERIF; ctx.textAlign='left'; ctx.fillText('Q',X(Q)+4,T+14); }
+  }
+  addAnim(hcv,()=>{ exchange(160); draw(); });
+  draw();
+  window.addEventListener('resize',()=>{G=setup(gcv);H=setup(hcv);draw();});
+})();
+
+/* ---------- 02a Derivation player ---------- */
+(function(){
+  const R=String.raw;
+  const EXP_E=R`\exp\!\left(-\dfrac{E}{\kB T}\right)`, EXP_Q=R`\exp\!\left(-\dfrac{Q}{\kB T}\right)`, EXP_R=R`\exp\!\left(-\dfrac{Q}{RT}\right)`;
+  const t=(k,tex,from)=>({k,tex,from});
+  const SC=[
+    {g:'dist',eq:[t('P',R`P(E)`),t('eq','='),t('c',R`\dfrac{1}{\kB T}`),t('xE',EXP_E)]},
+    {g:'tail',eq:[t('PQ',R`P(E\ge Q)`,'P'),t('eq','='),t('int',R`\displaystyle\int_{Q}^{\infty}`),t('P',R`P(E)`),t('dE',R`\dd E`)]},
+    {g:'tail',eq:[t('PQ',R`P(E\ge Q)`),t('eq','='),t('int',R`\displaystyle\int_{Q}^{\infty}`),t('c',R`\dfrac{1}{\kB T}`,'P'),t('xE',EXP_E,'P'),t('dE',R`\dd E`)]},
+    {g:'tail',eq:[t('PQ',R`P(E\ge Q)`),t('eq','='),t('br',R`\Biggl[\,-\exp\!\left(-\dfrac{E}{\kB T}\right)\Biggr]_{Q}^{\infty}`,['int','c','xE','dE'])]},
+    {g:'tailv',eq:[t('PQ',R`P(E\ge Q)`),t('eq','='),t('xQ',EXP_Q,['br'])]},
+    {g:'atom',eq:[t('G',R`\Gamma`,'PQ'),t('eq','='),t('nu',R`\nu`),t('x',R`\times`),t('xQ',EXP_Q)]},
+    {g:'walk',eq:[t('D',R`D`),t('eq','='),t('six',R`\dfrac{1}{6}`),t('a2',R`a^{2}`),t('G',R`\Gamma`)]},
+    {g:'walk',eq:[t('D',R`D`),t('eq','='),t('six',R`\dfrac{1}{6}`),t('a2',R`a^{2}`),t('nu',R`\nu`,'G'),t('xQ',EXP_Q,'G')]},
+    {g:'DT',eq:[t('D',R`D`),t('eq','='),t('D0',R`D_0`,['six','a2','nu']),t('xQ',EXP_Q)]},
+    {g:'DT',eq:[t('D',R`D`),t('eq','='),t('D0',R`D_0`),t('xR',EXP_R,'xQ')]},
+    {g:'arr',eq:[t('lnD',R`\ln D`,'D'),t('eq','='),t('lnD0',R`\ln D_0`,'D0'),t('m','-'),t('QR',R`\dfrac{Q}{R}`,'xR'),t('dot',R`\cdot`),t('iT',R`\dfrac{1}{T}`,'xR')]}
+  ];
+  const stage=$('#eqStage'), cv=$('#derivCv'), gw=$('#gwrap'); let C=setup(cv);
+  const steps=[...document.querySelectorAll('#pTexts .pstep')], caps=[...document.querySelectorAll('#gCaps .gcap')];
+  const lbl={}; document.querySelectorAll('.glbl').forEach(e=>lbl[e.dataset.l]=e);
+  const dots=$('#pDots');
+  SC.forEach((_,i)=>{ const b=document.createElement('button'); b.type='button'; b.setAttribute('aria-label',`ステップ ${i+1}`); b.addEventListener('click',()=>go(i,true)); dots.appendChild(b); });
+  let idx=-1, cur=null, sceneT=0, auto=null, ready=false;
+
+  function texNode(tex){
+    if(window.MathJax&&MathJax.tex2svg){ try{ return MathJax.tex2svg(tex,{display:false}); }catch(e){} }
+    const s=document.createElement('span'); s.textContent=tex; s.style.fontFamily='var(--mono)'; s.style.fontSize='.6em'; return s;
+  }
+  function build(sc){
+    const line=document.createElement('div'); line.className='eqline'; const map={};
+    for(const tk of sc.eq){ const sp=document.createElement('span'); sp.className='tok'; sp.dataset.k=tk.k; sp.appendChild(texNode(tk.tex)); line.appendChild(sp); map[tk.k]=sp; }
+    stage.appendChild(line);
+    const avail=stage.clientWidth-24; if(line.scrollWidth>avail){ line.style.fontSize=(avail/line.scrollWidth)+'em'; }
+    return {el:line,map};
+  }
+  function union(rs){ const l=Math.min(...rs.map(r=>r.left)),tp=Math.min(...rs.map(r=>r.top)),r=Math.max(...rs.map(r=>r.right)),b=Math.max(...rs.map(r=>r.bottom)); return {left:l,top:tp,width:r-l,height:b-tp}; }
+  function go(i,animate){
+    if(i<0||i>=SC.length||i===idx)return;
+    const forward=i===idx+1;
+    [...stage.querySelectorAll('.eqline')].forEach(el=>{ if(!cur||el!==cur.el)el.remove(); });
+    const sc=SC[i], nl=build(sc);
+    const doAnim=animate&&cur&&!reduce;
+    if(doAnim){
+      const old={}; for(const k in cur.map)old[k]=cur.map[k].getBoundingClientRect();
+      const keep=new Set(), morphFrom=new Set();
+      const plan=[];
+      for(const tk of sc.eq){
+        const sp=nl.map[tk.k], nr=sp.getBoundingClientRect();
+        let src=null, same=false;
+        if(old[tk.k]){ src=[tk.k]; same=true; }
+        else if(forward&&tk.from){ src=[].concat(tk.from).filter(k=>old[k]); if(!src.length)src=null; }
+        if(src){ const r=union(src.map(k=>old[k])); src.forEach(k=>same?keep.add(k):morphFrom.add(k));
+          const sx=Math.max(0.2,Math.min(5,r.width/Math.max(1,nr.width))), sy=Math.max(0.2,Math.min(5,r.height/Math.max(1,nr.height)));
+          sp.style.transformOrigin='0 0'; sp.style.transition='none';
+          sp.style.transform=`translate(${r.left-nr.left}px,${r.top-nr.top}px) scale(${sx},${sy})`;
+          if(!same){ sp.style.opacity='0'; sp.classList.add('hl'); }
+          plan.push({sp,kind:same?'move':'morph'});
+        } else { sp.style.opacity='0'; sp.style.transform='translateY(14px)'; sp.classList.add('hl'); plan.push({sp,kind:'fresh'}); }
+      }
+      for(const k in cur.map){ const s=cur.map[k]; if(keep.has(k)){ s.style.visibility='hidden'; } else { s.style.transition='opacity .45s ease, transform .6s ease'; s.style.opacity='0'; if(!morphFrom.has(k))s.style.transform='translateY(-12px)'; } }
+      void nl.el.offsetWidth;
+      requestAnimationFrame(()=>{ for(const p of plan){ const s=p.sp;
+        if(p.kind==='move'){ s.style.transition='transform .85s cubic-bezier(.65,0,.35,1)'; }
+        else if(p.kind==='morph'){ s.style.transition='transform .85s cubic-bezier(.65,0,.35,1), opacity .5s ease .2s'; }
+        else { s.style.transition='transform .6s ease .45s, opacity .6s ease .45s'; }
+        s.style.transform=''; s.style.opacity='1'; } });
+      const oldEl=cur.el; setTimeout(()=>oldEl.remove(),900);
+      setTimeout(()=>{ for(const p of plan){ if(p.kind!=='move'){ p.sp.classList.add('fade'); p.sp.classList.remove('hl'); } } },1500);
+    } else if(cur){ cur.el.remove(); }
+    cur=nl; idx=i; sceneT=0;
+    steps.forEach(s=>s.classList.toggle('on',+s.dataset.i===i));
+    caps.forEach(s=>s.classList.toggle('on',+s.dataset.i===i));
+    [...dots.children].forEach((b,k)=>{ b.setAttribute('aria-current',k===i?'true':'false'); b.classList.toggle('done',k<i); });
+    $('#pPrev').disabled=i===0; $('#pNext').disabled=i===SC.length-1;
+    resetGraph(); drawGraph(0);
+  }
+  $('#pPrev').addEventListener('click',()=>{ stopAuto(); go(idx-1,true); });
+  $('#pNext').addEventListener('click',()=>{ stopAuto(); go(idx+1,true); });
+  const ab=$('#pAuto');
+  function stopAuto(){ if(auto){clearInterval(auto);auto=null;} ab.setAttribute('aria-pressed','false'); ab.textContent='自動で再生'; }
+  ab.addEventListener('click',()=>{ if(auto){stopAuto();return;} if(idx===SC.length-1)go(0,false); ab.setAttribute('aria-pressed','true'); ab.textContent='自動再生を止める';
+    auto=setInterval(()=>{ if(idx>=SC.length-1){stopAuto();return;} go(idx+1,true); },5200); });
+  $('#player').addEventListener('keydown',e=>{ if(e.key==='ArrowRight'){stopAuto();go(idx+1,true);} else if(e.key==='ArrowLeft'){stopAuto();go(idx-1,true);} });
+
+  /* ---- graphs ---- */
+  let atom, walk;
+  function resetGraph(){
+    atom={w:0,ph:Math.PI/2+0.01,hop:null,att:0,suc:0,fail:0,cyc:0};
+    walk={path:[[0,0]],acc:0};
+  }
+  function hideLabels(){ for(const k in lbl)lbl[k].classList.remove('on'); }
+  function place(k,x,y,dx,dy){ const e=lbl[k]; e.style.left=x+'px'; e.style.top=y+'px'; e.style.transform=`translate(${dx===undefined?-50:dx}%,${dy===undefined?-50:dy}%)`; e.classList.add('on'); }
+  function axes(ctx,L,T,pw,ph){ ctx.strokeStyle='rgba(235,232,225,.55)'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(L,T-6); ctx.lineTo(L,T+ph); ctx.lineTo(L+pw+6,T+ph); ctx.stroke(); }
+  function drawGraph(dt){
+    sceneT+=dt; const sc=SC[idx]; if(!sc)return; const g=sc.g; const {ctx,w,h}=C; ctx.clearRect(0,0,w,h); hideLabels();
+    const tt=sceneT;
+    if(g==='dist'||g==='tail'||g==='tailv'){
+      const L=40,R=24,T=22,B=34,pw=w-L-R,ph=h-T-B; const X=E=>L+E/6*pw, Y=p=>T+(1-p/1.08)*ph;
+      axes(ctx,L,T,pw,ph);
+      const prog=g==='dist'?Math.min(1,tt/1.4):1;
+      if(g!=='dist'){ const a=Math.min(1,tt/0.9);
+        ctx.beginPath(); ctx.moveTo(X(2),Y(0)); for(let i=0;i<=80;i++){ const E=2+4*i/80*a; ctx.lineTo(X(E),Y(Math.exp(-E))); } ctx.lineTo(X(2+4*a),Y(0)); ctx.closePath();
+        const gr=ctx.createLinearGradient(X(2),0,X(6),0); gr.addColorStop(0,'rgba(255,199,110,.75)'); gr.addColorStop(1,'rgba(255,138,61,.25)'); ctx.fillStyle=gr; ctx.fill();
+        ctx.strokeStyle=COL.gold; ctx.setLineDash([5,4]); ctx.lineWidth=1.3; ctx.beginPath(); ctx.moveTo(X(2),Y(0)); ctx.lineTo(X(2),Y(Math.exp(-2))-30); ctx.stroke(); ctx.setLineDash([]);
+        place('Q',X(2),Y(0)+16);
+        if(g==='tailv'){ ctx.fillStyle=COL.gold; ctx.font='600 18px "JetBrains Mono",monospace'; ctx.textAlign='left'; ctx.fillText('≈ 0.14',X(2.9),Y(0.42)); ctx.strokeStyle='rgba(255,199,110,.7)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(X(3.1),Y(0.37)); ctx.lineTo(X(2.6),Y(0.06)); ctx.stroke(); }
+      }
+      ctx.strokeStyle=COL.cold; ctx.lineWidth=2.4; ctx.beginPath(); for(let i=0;i<=200*prog;i++){ const E=6*i/200; i?ctx.lineTo(X(E),Y(Math.exp(-E))):ctx.moveTo(X(E),Y(Math.exp(-E))); } ctx.stroke();
+      ctx.strokeStyle='rgba(149,156,180,.6)'; ctx.setLineDash([3,4]); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(X(1),Y(0)); ctx.lineTo(X(1),Y(Math.exp(-1))); ctx.stroke(); ctx.setLineDash([]);
+      place('kT',X(1),Y(0)+16); place('E',L+pw+2,Y(0)+16); place('PE',L+6,T-8,0,-50);
+      return;
+    }
+    if(g==='atom'){
+      const L=24,Rr=24,T=46,B=26,pw=w-L-Rr,ph=h-T-B; const X=x=>L+(x+0.5)/2*pw, Y=u=>T+ph-u*ph;
+      ctx.beginPath(); for(let i=0;i<=200;i++){ const x=-0.5+2*i/200; i?ctx.lineTo(X(x),Y(U1(x))):ctx.moveTo(X(x),Y(U1(x))); } ctx.strokeStyle='rgba(150,214,240,.75)'; ctx.lineWidth=1.8; ctx.stroke();
+      const a=atom; let x;
+      if(a.hop){ a.hop.t+=dt/0.55; const s=Math.min(1,a.hop.t), e=s*s*(3-2*s); x=a.hop.x0+(a.hop.x1-a.hop.x0)*e; if(s>=1){ a.w=a.hop.to; a.hop=null; a.ph=Math.PI/2+0.01; a.cyc=0; } }
+      if(!a.hop){ const d=a.w===0?1:-1; a.ph+=dt*2*Math.PI*1.6; const c=Math.floor((a.ph-Math.PI/2)/(2*Math.PI)); if(c>a.cyc){ a.cyc=c; a.att++; if(Math.random()<0.14){ a.suc++; a.hop={x0:a.w+d*0.22,x1:a.w+d,to:a.w+d,t:0}; } else { a.fail=1; } }
+        x=a.hop?a.hop.x0:a.w+d*0.22*Math.sin(a.ph); }
+      if(a.fail>0){ a.fail-=dt*2.5; const d=a.w===0?1:-1; ctx.fillStyle=`rgba(255,138,61,${Math.max(0,a.fail)*0.8})`; ctx.beginPath(); ctx.arc(X(a.w+d*0.3),Y(U1(a.w+d*0.3))-10,7,0,6.2832); ctx.fill(); }
+      const ax=X(x), ay=Y(U1(x))-9; ctx.fillStyle=COL.gold; ctx.shadowColor=COL.gold; ctx.shadowBlur=14; ctx.beginPath(); ctx.arc(ax,ay,8,0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+      ctx.font='13px "Zen Kaku Gothic New",sans-serif'; ctx.fillStyle=COL.muted; ctx.textAlign='left';
+      ctx.fillText(`挑戦 ${a.att} 回`,L,22); ctx.fillStyle=COL.gold; ctx.fillText(`成功 ${a.suc} 回`,L+90,22);
+      place('Q',X(0.5)+16,Y(0.55)); ctx.strokeStyle=COL.gold; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(X(0.5),Y(1)); ctx.lineTo(X(0.5),Y(0)); ctx.stroke();
+      return;
+    }
+    if(g==='walk'){
+      const sp=16, cx=w/2, cy=h/2;
+      ctx.fillStyle='rgba(150,160,190,.28)'; for(let gx=cx%sp;gx<w;gx+=sp)for(let gy=cy%sp;gy<h;gy+=sp){ ctx.fillRect(gx-1,gy-1,2,2); }
+      walk.acc+=dt; while(walk.acc>0.09){ walk.acc-=0.09; const p=walk.path[walk.path.length-1]; const d=(Math.random()*4)|0; walk.path.push([p[0]+[1,-1,0,0][d],p[1]+[0,0,1,-1][d]]); if(walk.path.length>260)walk.path=[[0,0]]; }
+      const n=walk.path.length-1;
+      ctx.strokeStyle='rgba(255,199,110,.45)'; ctx.setLineDash([4,5]); ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(cx,cy,Math.sqrt(n)*sp,0,6.2832); ctx.stroke(); ctx.setLineDash([]);
+      ctx.lineWidth=1.6; for(let i=1;i<walk.path.length;i++){ const al=0.15+0.75*i/walk.path.length; ctx.strokeStyle=`rgba(92,196,255,${al})`; ctx.beginPath(); ctx.moveTo(cx+walk.path[i-1][0]*sp,cy+walk.path[i-1][1]*sp); ctx.lineTo(cx+walk.path[i][0]*sp,cy+walk.path[i][1]*sp); ctx.stroke(); }
+      const p=walk.path[n]; ctx.fillStyle=COL.gold; ctx.shadowColor=COL.gold; ctx.shadowBlur=12; ctx.beginPath(); ctx.arc(cx+p[0]*sp,cy+p[1]*sp,5,0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(cx,cy,3,0,6.2832); ctx.fill();
+      // scale bar a
+      ctx.strokeStyle=COL.text; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(20,h-18); ctx.lineTo(20+sp,h-18); ctx.moveTo(20,h-22); ctx.lineTo(20,h-14); ctx.moveTo(20+sp,h-22); ctx.lineTo(20+sp,h-14); ctx.stroke();
+      place('a',20+sp/2,h-34);
+      ctx.font='12px "JetBrains Mono",monospace'; ctx.fillStyle=COL.muted; ctx.textAlign='right'; ctx.fillText(`n = ${n}`,w-12,20);
+      const rr=Math.sqrt(n)*sp; if(rr>18) place('rn',cx+rr*0.72+6,cy-rr*0.72-6,0,-100);
+      return;
+    }
+    if(g==='DT'||g==='arr'){
+      const L=46,R=20,T=24,B=36,pw=w-L-R,ph=h-T-B; const QR=250000/8.314;
+      const rel=Tk=>Math.exp(-QR*(1/Tk-1/1000));
+      axes(ctx,L,T,pw,ph); ctx.font='11px "JetBrains Mono",monospace'; ctx.fillStyle=COL.muted;
+      const prog=Math.min(1,tt/1.4);
+      if(g==='DT'){
+        const T0=700,T1=1250, ym=rel(T1)*1.05; const X=Tk=>L+(Tk-T0)/(T1-T0)*pw, Y=v=>T+(1-v/ym)*ph;
+        ctx.textAlign='center'; for(let Tk=700;Tk<=1200;Tk+=100){ ctx.fillText(String(Tk),X(Tk),T+ph+15); }
+        ctx.strokeStyle=COL.cold; ctx.lineWidth=2.4; ctx.beginPath(); for(let i=0;i<=200*prog;i++){ const Tk=T0+(T1-T0)*i/200; i?ctx.lineTo(X(Tk),Y(rel(Tk))):ctx.moveTo(X(Tk),Y(rel(Tk))); } ctx.stroke();
+        if(prog>=1){ [1000,1100].forEach(Tk=>{ ctx.fillStyle=COL.gold; ctx.beginPath(); ctx.arc(X(Tk),Y(rel(Tk)),4.5,0,6.2832); ctx.fill(); });
+          ctx.fillStyle=COL.gold; ctx.font='600 14px "JetBrains Mono",monospace'; ctx.textAlign='right'; ctx.fillText('×15',X(1100)-8,Y(rel(1100))-8); }
+        place('T',L+pw-4,T+ph+28,-100,-50); place('D',L-10,T-6,-100,-50);
+      } else {
+        const x0=1/1250,x1=1/700, y0=Math.log(rel(700)), y1=Math.log(rel(1250));
+        const X=v=>L+(v-x0)/(x1-x0)*pw, Y=v=>T+(1-(v-y0)/(y1-y0))*ph;
+        ctx.textAlign='center'; [1/1200,1/1000,1/800].forEach(v=>ctx.fillText((v*1000).toFixed(2),X(v),T+ph+15));
+        ctx.strokeStyle=COL.cold; ctx.lineWidth=2.4; ctx.beginPath(); for(let i=0;i<=100*prog;i++){ const v=x0+(x1-x0)*i/100; const yy=-QR*(v-1/1000); i?ctx.lineTo(X(v),Y(yy)):ctx.moveTo(X(v),Y(yy)); } ctx.stroke();
+        if(prog>=1){ const va=1/1100, vb=1/850, ya=-QR*(va-1/1000), yb=-QR*(vb-1/1000);
+          ctx.strokeStyle=COL.gold; ctx.lineWidth=1.3; ctx.beginPath(); ctx.moveTo(X(va),Y(ya)); ctx.lineTo(X(vb),Y(ya)); ctx.lineTo(X(vb),Y(yb)); ctx.stroke();
+          place('slope',X(vb)+10,(Y(ya)+Y(yb))/2,0,-50); }
+        place('invT',L+pw-4,T+ph+28,-100,-50); place('lnD',L-8,T-6,-100,-50);
+      }
+    }
+  }
+  addAnim(cv,dt=>drawGraph(dt));
+  function init(){ if(ready)return; ready=true; go(0,false); }
+  if(window.__mjReady)init(); else { window.addEventListener('mj-ready',init); setTimeout(init,6000); }
+  window.addEventListener('resize',()=>{ C=setup(cv); const k=idx; if(cur){cur.el.remove();cur=null;} idx=-1; go(k<0?0:k,false); });
+})();
+
+/* ---------- 02b Arrhenius experiment ---------- */
+(function(){
+  const lcv=$('#arrLand'), pcv=$('#arrPlot'); let LC=setup(lcv), PC=setup(pcv);
+  const M=300, L=6, xs=new Float64Array(M), well=new Int32Array(M), lane=new Float64Array(M);
+  for(let i=0;i<M;i++)lane[i]=Math.random();
+  const BQ=[2,3,4,5,6,7]; const dt=0.005;
+  let pts=[], idx=-1, kT=0.5, hops=0, simT=0, equil=0, running=false, flashes=[];
+  function initAt(b){ kT=1/b; for(let i=0;i<M;i++){ well[i]=Math.floor(Math.random()*L); xs[i]=well[i]; } hops=0; simT=0; equil=0.5; }
+  function start(){ pts=[]; idx=0; initAt(BQ[0]); running=true; anim.force=true; $('#arrSlope').textContent='—'; $('#arrRatio').textContent='—'; }
+  function fit(){ if(pts.length<2)return null; let sw=0,sx=0,sy=0,sxx=0,sxy=0; for(const p of pts){ const wgt=p.n; sw+=wgt; sx+=wgt*p.b; sy+=wgt*p.y; sxx+=wgt*p.b*p.b; sxy+=wgt*p.b*p.y; } const m=(sw*sxy-sx*sy)/(sw*sxx-sx*sx); return {m,c:(sy-m*sx)/sw}; }
+  function frame(rdt){
+    if(running){
+      const steps=100;
+      if(equil>0){ langevinStep(xs,well,kT,dt,steps,null); equil-=steps*dt; }
+      else { langevinStep(xs,well,kT,dt,steps,(i,a,b)=>{ hops++; if(flashes.length<30)flashes.push({x:(a+b)/2,life:1}); }); simT+=steps*dt; }
+      const b=BQ[idx];
+      $('#arrStatus').textContent=`Q/kT = ${b} を測定中… 跳躍 ${hops} 回 / 経過 ${simT.toFixed(0)}`;
+      if(hops>=220||simT>=2500){ const g=hops/(M*simT); pts.push({b,y:Math.log(g),e:1/Math.sqrt(Math.max(1,hops)),n:hops});
+        idx++; if(idx<BQ.length){ initAt(BQ[idx]); } else { running=false; anim.force=false; $('#arrStatus').textContent=`測定完了：6温度 × 粒子${M}個`; }
+        const f=fit(); if(f)$('#arrSlope').textContent=f.m.toFixed(3);
+        const lp=pts[pts.length-1]; $('#arrRatio').textContent=Math.exp(lp.y-(Math.log(2*Math.PI)-lp.b)).toFixed(2);
+      }
+    }
+    for(let k=flashes.length-1;k>=0;k--){ flashes[k].life-=rdt*1.8; if(flashes[k].life<=0)flashes.splice(k,1); }
+    drawLandscape(LC,xs,lane,L,kT,0.5,flashes); drawPlot();
+  }
+  function drawPlot(){
+    const {ctx,w,h}=PC; ctx.clearRect(0,0,w,h);
+    const Lp=46,R=12,T=14,B=34,pw=w-Lp-R,ph=h-T-B, x0=1.5,x1=7.5,y0=-6.5,y1=0.5;
+    const X=b=>Lp+(b-x0)/(x1-x0)*pw, Y=y=>T+(1-(y-y0)/(y1-y0))*ph;
+    ctx.strokeStyle=COL.line; ctx.lineWidth=1; ctx.font='11px "JetBrains Mono",monospace'; ctx.fillStyle=COL.muted;
+    ctx.textAlign='center'; for(let b=2;b<=7;b++){ ctx.beginPath(); ctx.moveTo(X(b),T); ctx.lineTo(X(b),T+ph); ctx.stroke(); ctx.fillText(String(b),X(b),T+ph+15); }
+    ctx.textAlign='right'; for(let y=-6;y<=0;y+=1){ ctx.beginPath(); ctx.moveTo(Lp,Y(y)); ctx.lineTo(Lp+pw,Y(y)); ctx.stroke(); ctx.fillText(String(y),Lp-6,Y(y)+4); }
+    ctx.textAlign='center'; ctx.font='12px "Zen Kaku Gothic New",sans-serif'; ctx.fillText('Q / kT（1/T に比例、右ほど低温）',Lp+pw/2,h-3);
+    ctx.save(); ctx.translate(12,T+ph/2); ctx.rotate(-Math.PI/2); ctx.font=SERIF; ctx.fillText('ln Γ',0,0); ctx.restore();
+    ctx.strokeStyle=COL.cold; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(X(x0),Y(Math.log(2*Math.PI)-x0)); ctx.lineTo(X(x1),Y(Math.log(2*Math.PI)-x1)); ctx.stroke();
+    const f=fit(); if(f){ ctx.strokeStyle=COL.gold; ctx.setLineDash([6,4]); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(X(x0),Y(f.c+f.m*x0)); ctx.lineTo(X(x1),Y(f.c+f.m*x1)); ctx.stroke(); ctx.setLineDash([]); }
+    for(const p of pts){ const c=heat(1-(p.b-2)/5*0.85); ctx.strokeStyle=c; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(X(p.b),Y(p.y-p.e)); ctx.lineTo(X(p.b),Y(p.y+p.e)); ctx.stroke(); ctx.fillStyle=c; ctx.beginPath(); ctx.arc(X(p.b),Y(p.y),5,0,6.2832); ctx.fill(); }
+    if(running&&equil<=0&&simT>1&&hops>0){ const b=BQ[idx], g=hops/(M*simT); ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.beginPath(); ctx.arc(X(b),Y(Math.log(g)),7,0,6.2832); ctx.stroke(); }
+  }
+  const anim=addAnim(pcv,frame);
+  const io2=new IntersectionObserver(es=>{ for(const e of es){ if(e.isIntersecting&&idx===-1){ if(!reduce)start(); io2.disconnect(); } } },{threshold:0.3});
+  io2.observe(pcv);
+  $('#arrRun').addEventListener('click',start);
+  initAt(4); drawLandscape(LC,xs,lane,L,kT,0.5,flashes); drawPlot();
+  window.addEventListener('resize',()=>{LC=setup(lcv);PC=setup(pcv);drawLandscape(LC,xs,lane,L,kT,0.5,flashes);drawPlot();});
+})();
+
+/* ---------- 03 Unified analogies ---------- */
+(function(){
+  let D=3, T=1;
+  const listeners=[];
+  function upd(){ const r=D/T; $('#uR').textContent=r.toFixed(2); $('#uE').textContent=Math.exp(-r).toPrecision(3); $('#uL').textContent=(1/(1+Math.exp(r))).toPrecision(3); listeners.forEach(f=>f()); }
+  bind('uD',v=>{D=v;upd();},1); bind('uT',v=>{T=v;upd();},2);
+  const tNorm=()=>Math.min(1,(T-0.4)/2.6);
+
+  /* A: lattice hopping */
+  (function(){
+    const cv=$('#pA'); let C=setup(cv); const COLS=12, ROWS=5, NA=14, NU=5;
+    const occ=new Int8Array(COLS*ROWS); const atoms=[];
+    while(atoms.length<NA){ const s=(Math.random()*COLS*ROWS)|0; if(!occ[s]){ occ[s]=1; atoms.push({s,from:s,p:1,next:Math.random()/NU,wrap:false}); } }
+    let att=0, suc=0, trails=[], phase=0;
+    listeners.push(()=>{att=0;suc=0;$('#pAt').textContent=fmtP(Math.exp(-D/T));$('#pAm').textContent='—';});
+    function frame(dt){
+      const p=Math.exp(-D/T);
+      for(const a of atoms){
+        if(a.p<1){ a.p=Math.min(1,a.p+dt/0.18); }
+        a.next-=dt;
+        if(a.next<=0){ a.next+=(-Math.log(1-Math.random()))/NU;
+          const c=a.s%COLS, r=(a.s/COLS)|0; const d=(Math.random()*4)|0; const dc=[1,-1,0,0][d], dr=[0,0,1,-1][d];
+          const nc=(c+dc+COLS)%COLS, nr=(r+dr+ROWS)%ROWS, ns=nr*COLS+nc;
+          if(!occ[ns]&&a.p>=1){ att++; if(Math.random()<p){ suc++; occ[a.s]=0; occ[ns]=1; a.from=a.s; a.s=ns; a.p=0; a.wrap=Math.abs(nc-c)>1||Math.abs(nr-r)>1; trails.push({from:a.from,to:ns,life:1,wrap:a.wrap}); } }
+        }
+      }
+      for(let k=trails.length-1;k>=0;k--){ trails[k].life-=dt*0.8; if(trails[k].life<=0)trails.splice(k,1); }
+      if(att>0)$('#pAm').textContent=fmtP(suc/att)+`  (${suc}/${att})`;
+      draw(dt);
+    }
+    function draw(dt){
+      phase+=(dt||0)*40;
+      const {ctx,w,h}=C; ctx.clearRect(0,0,w,h);
+      const cw=w/COLS, ch=h/ROWS; const pos=s=>[((s%COLS)+0.5)*cw,(((s/COLS)|0)+0.5)*ch];
+      ctx.fillStyle='rgba(150,160,190,.35)'; for(let s=0;s<COLS*ROWS;s++){ const [x,y]=pos(s); ctx.beginPath(); ctx.arc(x,y,2,0,6.2832); ctx.fill(); }
+      for(const t of trails){ if(t.wrap)continue; const [x0,y0]=pos(t.from),[x1,y1]=pos(t.to); ctx.strokeStyle=`rgba(255,199,110,${t.life*0.8})`; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke(); }
+      const tn=tNorm(), amp=1+4*Math.sqrt(T/3), col=heat(0.35+0.6*tn), rad=Math.min(cw,ch)*0.28;
+      ctx.fillStyle=col; ctx.shadowColor=col; ctx.shadowBlur=10;
+      atoms.forEach((a,k)=>{ let [x,y]=pos(a.s); if(a.p<1&&!a.wrap){ const [x0,y0]=pos(a.from); const e=a.p*a.p*(3-2*a.p); x=x0+(x-x0)*e; y=y0+(y-y0)*e; }
+        x+=amp*Math.sin(phase*0.9+k*1.7); y+=amp*Math.cos(phase*1.13+k*2.3);
+        ctx.beginPath(); ctx.arc(x,y,rad,0,6.2832); ctx.fill(); });
+      ctx.shadowBlur=0;
+    }
+    addAnim(cv,frame); draw(0);
+    window.addEventListener('resize',()=>{C=setup(cv);draw(0);});
+  })();
+
+  /* B: traffic route choice */
+  (function(){
+    const cv=$('#pB'); let C=setup(cv); const cars=[]; let spawn=0, nA=0, nB=0;
+    listeners.push(()=>{nA=0;nB=0;$('#pBt').textContent=fmtP(1/(1+Math.exp(D/T)));$('#pBm').textContent='—';});
+    function geom(){ const {w,h}=C; return {O:[34,h*0.46],Dd:[w-34,h*0.46],cA:[w/2,h*0.46-h*0.5],cB:[w/2,h*0.46+h*0.75]}; }
+    function bez(p0,c,p1,s){ const u=1-s; return [u*u*p0[0]+2*u*s*c[0]+s*s*p1[0], u*u*p0[1]+2*u*s*c[1]+s*s*p1[1]]; }
+    function frame(dt){
+      spawn-=dt; if(spawn<=0){ spawn+=0.28; const pB=1/(1+Math.exp(D/T)); const isB=Math.random()<pB; if(isB)nB++; else nA++; cars.push({b:isB,s:0,dur:isB?2.6*(1+D/6):2.6}); }
+      for(let k=cars.length-1;k>=0;k--){ cars[k].s+=dt/cars[k].dur; if(cars[k].s>=1)cars.splice(k,1); }
+      if(nA+nB>0)$('#pBm').textContent=fmtP(nB/(nA+nB))+`  (${nB}/${nA+nB})`;
+      draw();
+    }
+    function draw(){
+      const {ctx,w,h}=C; ctx.clearRect(0,0,w,h); const g=geom();
+      const road=(c,col)=>{ ctx.strokeStyle='#1d2440'; ctx.lineWidth=12; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(...g.O); ctx.quadraticCurveTo(...c,...g.Dd); ctx.stroke(); ctx.strokeStyle=col; ctx.lineWidth=1; ctx.setLineDash([6,6]); ctx.stroke(); ctx.setLineDash([]); };
+      road(g.cA,'rgba(92,196,255,.5)'); road(g.cB,'rgba(255,138,61,.5)');
+      ctx.font='12px "Zen Kaku Gothic New",sans-serif'; ctx.textAlign='center';
+      const mA=bez(g.O,g.cA,g.Dd,0.5), mB=bez(g.O,g.cB,g.Dd,0.5);
+      ctx.fillStyle=COL.cold; ctx.fillText('経路A',mA[0],mA[1]-12);
+      ctx.fillStyle=COL.hot; ctx.fillText(`経路B（Δ = ${D.toFixed(1)} だけ遅い）`,mB[0],mB[1]+22);
+      for(const c of cars){ const p=bez(g.O,c.b?g.cB:g.cA,g.Dd,c.s), q=bez(g.O,c.b?g.cB:g.cA,g.Dd,Math.min(1,c.s+0.01)); const ang=Math.atan2(q[1]-p[1],q[0]-p[0]);
+        ctx.save(); ctx.translate(p[0],p[1]); ctx.rotate(ang); ctx.fillStyle=c.b?COL.hot:COL.cold; ctx.fillRect(-6,-3.5,12,7); ctx.restore(); }
+      ctx.fillStyle=COL.text; ctx.font='600 13px "JetBrains Mono",monospace'; ctx.fillText('O',g.O[0],g.O[1]+4.5); ctx.fillText('D',g.Dd[0],g.Dd[1]+4.5);
+      ctx.strokeStyle=COL.text; ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(g.O[0],g.O[1],11,0,6.2832); ctx.stroke(); ctx.beginPath(); ctx.arc(g.Dd[0],g.Dd[1],11,0,6.2832); ctx.stroke();
+    }
+    addAnim(cv,frame); draw();
+    window.addEventListener('resize',()=>{C=setup(cv);draw();});
+  })();
+
+  /* C: behavioural choice raster */
+  (function(){
+    const cv=$('#pC'); let C=setup(cv); const hist=[]; let clock=0, next=0, nA=0, nB=0;
+    listeners.push(()=>{nA=0;nB=0;$('#pCt').textContent=fmtP(1/(1+Math.exp(D/T)));$('#pCm').textContent='—';});
+    for(let i=0;i<70;i++){ const b=Math.random()<1/(1+Math.exp(D/T)); hist.push({t:-i*0.2,b}); }
+    hist.reverse();
+    function frame(dt){
+      clock+=dt;
+      while(next<=clock){ next+=0.2; const b=Math.random()<1/(1+Math.exp(D/T)); hist.push({t:next,b}); if(b)nB++; else nA++; }
+      while(hist.length&&hist[0].t<clock-16)hist.shift();
+      if(nA+nB>0)$('#pCm').textContent=fmtP(nB/(nA+nB))+`  (${nB}/${nA+nB})`;
+      draw();
+    }
+    function draw(){
+      const {ctx,w,h}=C; ctx.clearRect(0,0,w,h); const L=96, R=10, sp=(w-L-R)/14;
+      const yA=h*0.32, yB=h*0.7;
+      ctx.font='12px "Zen Kaku Gothic New",sans-serif'; ctx.textAlign='left';
+      ctx.fillStyle=COL.cold; ctx.fillText('A：価値 V',6,yA+4); ctx.fillStyle=COL.gold; ctx.fillText('B：価値 V − Δ',6,yB+4);
+      ctx.strokeStyle=COL.line; ctx.lineWidth=1; [yA,yB].forEach(y=>{ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(w-R,y);ctx.stroke();});
+      for(const e of hist){ const x=w-R-(clock-e.t)*sp; if(x<L)continue; const y=e.b?yB:yA; ctx.strokeStyle=e.b?COL.gold:COL.cold; ctx.lineWidth=e.b?3:2; ctx.beginPath(); ctx.moveTo(x,y-14); ctx.lineTo(x,y+14); ctx.stroke(); }
+      ctx.fillStyle=COL.muted; ctx.font='11px "Zen Kaku Gothic New",sans-serif'; ctx.textAlign='right'; ctx.fillText('← 過去　　現在 →',w-R,h-6);
+    }
+    addAnim(cv,frame); draw();
+    window.addEventListener('resize',()=>{C=setup(cv);draw();});
+  })();
+
+  /* D: Necker cube with double-well */
+  (function(){
+    const cv=$('#pD'); let C=setup(cv); let x=1, state=1, lastSw=0, simT=0, dw=[], strip=[]; const S=3, dt=0.002;
+    function theo(){ const r=D/T; if(D<=0||r<1.5)return NaN; const k=Math.sqrt(32)*D/(2*Math.PI)*Math.exp(-r); return 1/k/S; }
+    listeners.push(()=>{ dw=[]; lastSw=simT; const th=theo(); $('#pDt').textContent=isFinite(th)?(th<1000?th.toFixed(1)+' s':th.toExponential(1)+' s'):'障壁が低すぎ'; $('#pDm').textContent='—'; });
+    function frame(rdt){
+      const steps=Math.max(1,Math.round(S*rdt/dt)), amp=Math.sqrt(2*T*dt);
+      for(let s=0;s<steps;s++){ x+=-4*D*x*(x*x-1)*dt+amp*gauss(); if(x>4)x=4; if(x<-4)x=-4; simT+=dt;
+        const ns=x>0.7?1:(x<-0.7?-1:state); if(ns!==state){ dw.push(simT-lastSw); lastSw=simT; state=ns; } }
+      strip.push({t:simT,s:state}); while(strip.length&&strip[0].t<simT-15*S)strip.shift();
+      if(dw.length>0){ const m=dw.reduce((a,b)=>a+b,0)/dw.length/S; $('#pDm').textContent=m.toFixed(1)+` s  (n=${dw.length})`; }
+      draw();
+    }
+    function draw(){
+      const {ctx,w,h}=C; ctx.clearRect(0,0,w,h);
+      const cubeW=Math.min(w*0.42,h*0.95);
+      const s=Math.min(cubeW*0.5,(h-60)/1.18), ox=s*0.36, cx0=14+(cubeW-s-ox)/2, cy0=24+((h-58)-(s+ox))/2+ox;
+      const F=[[cx0,cy0],[cx0+s,cy0],[cx0+s,cy0+s],[cx0,cy0+s]];
+      const Bk=F.map(p=>[p[0]+ox,p[1]-ox]);
+      const front=state===1?F:Bk, back=state===1?Bk:F;
+      const col=state===1?COL.vio:COL.cold;
+      ctx.lineCap='round';
+      ctx.strokeStyle='rgba(149,156,180,.35)'; ctx.lineWidth=1.2; ctx.setLineDash([3,4]);
+      ctx.beginPath(); back.forEach((p,i)=>{const q=back[(i+1)%4]; ctx.moveTo(...p); ctx.lineTo(...q);}); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle='rgba(235,232,225,.7)'; ctx.lineWidth=1.4; ctx.beginPath(); for(let i=0;i<4;i++){ ctx.moveTo(...F[i]); ctx.lineTo(...Bk[i]); } ctx.stroke();
+      ctx.fillStyle=state===1?'rgba(180,156,255,.14)':'rgba(92,196,255,.14)'; ctx.beginPath(); front.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p)); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle=col; ctx.lineWidth=2.6; ctx.stroke();
+      ctx.fillStyle=col; ctx.font='12px "Zen Kaku Gothic New",sans-serif'; ctx.textAlign='center'; ctx.fillText(state===1?'左下の面が手前に見える':'右上の面が手前に見える',14+cubeW/2,14);
+      const L=cubeW+30, R=w-10, top=18, bot=h-44, xr=1.7;
+      const Ux=u=>D*(u*u-1)*(u*u-1); const Umax=Math.max(D,0.5)*1.6+0.2;
+      const X=u=>L+(u+xr)/(2*xr)*(R-L), Y=v=>bot-Math.min(v,Umax)/Umax*(bot-top);
+      ctx.beginPath(); for(let i=0;i<=120;i++){ const u=-xr+2*xr*i/120; i?ctx.lineTo(X(u),Y(Ux(u))):ctx.moveTo(X(u),Y(Ux(u))); }
+      ctx.strokeStyle='rgba(150,214,240,.7)'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle=COL.muted; ctx.font='11px "Zen Kaku Gothic New",sans-serif'; ctx.textAlign='center'; ctx.fillText('解釈A',X(1),bot+14); ctx.fillText('解釈B',X(-1),bot+14);
+      const tn=tNorm(), bc=heat(0.35+0.6*tn); ctx.fillStyle=bc; ctx.shadowColor=bc; ctx.shadowBlur=10; const xc=Math.max(-xr,Math.min(xr,x)); ctx.beginPath(); ctx.arc(X(xc),Y(Ux(xc))-6,6,0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+      const sy=h-14, sx0=14, sx1=w-10; if(strip.length>1){ const t1=simT, t0=t1-15*S; for(let i=1;i<strip.length;i++){ const a=strip[i-1], b=strip[i]; const xa=sx0+(a.t-t0)/(15*S)*(sx1-sx0), xb=sx0+(b.t-t0)/(15*S)*(sx1-sx0); ctx.fillStyle=a.s===1?COL.vio:COL.cold; ctx.fillRect(xa,sy-5,Math.max(1,xb-xa+0.5),10); } }
+      ctx.fillStyle=COL.muted; ctx.font='10px "Zen Kaku Gothic New",sans-serif'; ctx.textAlign='left'; ctx.fillText('見え方の履歴（直近15秒）',sx0,sy-9);
+    }
+    addAnim(cv,frame); draw();
+    window.addEventListener('resize',()=>{C=setup(cv);draw();});
+  })();
+
+  upd();
+})();
+
+/* ---------- 04 Gumbel vs Gaussian tails ---------- */
+(function(){
+  const cv=$('#tailCv'); let C=setup(cv); let logY=false, data=null;
+  const NS=20000, XS=[]; for(let x=0;x<=6.0001;x+=0.25)XS.push(x);
+  function gumbel(){ let u=0; while(u===0)u=Math.random(); return -Math.log(-Math.log(u)); }
+  const sig=Math.PI/Math.sqrt(6);
+  function sample(){ data=XS.map(x=>{ let g=0,n=0; for(let k=0;k<NS;k++){ if(-x+gumbel()>gumbel())g++; if(-x+sig*gauss()>sig*gauss())n++; } return {x,g:g/NS,n:n/NS}; }); }
+  function draw(){
+    const {ctx,w,h}=C; ctx.clearRect(0,0,w,h);
+    const L=52,R=14,T=14,B=34,pw=w-L-R,ph=h-T-B; const lmin=-5, lmax=0;
+    const X=x=>L+x/6*pw;
+    const Y=p=>{ if(logY){ const l=p>0?Math.log10(p):lmin-1; return T+ph*(1-(Math.max(lmin-0.2,l)-lmin)/(lmax-lmin)); } return T+ph*(1-p/0.55); };
+    ctx.strokeStyle=COL.line; ctx.lineWidth=1; ctx.font='11px "JetBrains Mono",monospace'; ctx.fillStyle=COL.muted;
+    ctx.textAlign='center'; for(let x=0;x<=6;x++){ ctx.beginPath(); ctx.moveTo(X(x),T); ctx.lineTo(X(x),T+ph); ctx.stroke(); ctx.fillText(String(x),X(x),T+ph+15); }
+    ctx.font=SERIF; ctx.fillText('x = Δ / T',L+pw/2,h-2); ctx.font='11px "JetBrains Mono",monospace';
+    ctx.textAlign='right';
+    if(logY){ for(let p=lmin;p<=lmax;p++){ const y=Y(Math.pow(10,p)); ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(L+pw,y); ctx.stroke(); ctx.fillText(p===0?'1':'10'+['⁻⁵','⁻⁴','⁻³','⁻²','⁻¹'][p+5],L-6,y+4); } }
+    else { for(let p=0;p<=0.5001;p+=0.1){ const y=Y(p); ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(L+pw,y); ctx.stroke(); ctx.fillText(p.toFixed(1),L-6,y+4); } }
+    ctx.save(); ctx.translate(12,T+ph/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.font='11px "Zen Kaku Gothic New",sans-serif'; ctx.fillText('不利な選択肢を選ぶ確率',0,0); ctx.restore();
+    const curve=(f,col,dash)=>{ ctx.strokeStyle=col; ctx.lineWidth=2; ctx.setLineDash(dash||[]); ctx.beginPath(); let st=false; for(let i=0;i<=240;i++){ const x=6*i/240, p=f(x); if(!logY&&p>0.56)continue; const px=X(x),py=Y(p); if(!st){ctx.moveTo(px,py);st=true;} else ctx.lineTo(px,py);} ctx.stroke(); ctx.setLineDash([]); };
+    curve(x=>Math.exp(-x),COL.gold,[6,4]);
+    curve(x=>1/(1+Math.exp(x)),COL.cold);
+    if(data){ for(const d of data){ if(d.g>0){ ctx.fillStyle=COL.hot; ctx.beginPath(); ctx.arc(X(d.x)-2.5,Y(d.g),3.6,0,6.2832); ctx.fill(); }
+      if(d.n>0){ ctx.fillStyle=COL.vio; ctx.beginPath(); ctx.arc(X(d.x)+2.5,Y(d.n),3.6,0,6.2832); ctx.fill(); }
+      else if(logY){ ctx.strokeStyle=COL.vio; ctx.beginPath(); ctx.moveTo(X(d.x)+2.5,T+ph-2); ctx.lineTo(X(d.x)+2.5,T+ph-10); ctx.stroke(); } } }
+  }
+  sample(); draw();
+  $('#tailLog').addEventListener('click',e=>{logY=!logY;e.currentTarget.setAttribute('aria-pressed',logY);draw();});
+  $('#tailResample').addEventListener('click',()=>{sample();draw();});
+  window.addEventListener('resize',()=>{C=setup(cv);draw();});
+})();
+
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
